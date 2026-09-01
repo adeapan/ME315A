@@ -1,0 +1,95 @@
+---
+title: "Lab03_Pan"
+author: "Artur de Araújo Pan 245001"
+format: pdf
+editor: visual
+---
+
+Criação das variáveis "flights", "airlines" e "airports"
+
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+
+airlines <- read.csv("airlines.csv")
+airports <- read_csv(
+  "airports.csv",
+  col_types = cols_only(
+    IATA_CODE = col_character(),
+    CITY = col_character(),
+    STATE = col_character(),
+    LATITUDE = col_double(),
+    LONGITUDE = col_double()
+  )
+)
+
+flight_processing <- function(chunk, pos) {
+  chunk %>%
+    na.omit() %>%
+    filter(!str_starts(as.character(DESTINATION_AIRPORT), "1")) %>%
+    group_by(DESTINATION_AIRPORT) %>%
+    summarise(
+      soma_atraso = sum(ARRIVAL_DELAY),
+      total_voos = n(),
+      .groups = "drop"
+    )
+}
+
+flights <- read_csv_chunked(file = "flights.csv.zip",
+                            callback = DataFrameCallback$new(flight_processing),
+                            chunk_size = 1000000,
+                            col_types = cols_only(
+                              DESTINATION_AIRPORT = col_character(),
+                              ARRIVAL_DELAY = col_double()
+                            ))
+
+```
+
+Contando aeroportos por Estado
+
+```{r}
+aeroportos_ausentes <- flights %>%
+  anti_join(airports, by = c("DESTINATION_AIRPORT" = "IATA_CODE")) %>%
+  pull(DESTINATION_AIRPORT)
+
+
+flights <- flights %>%
+  left_join(airports %>% select(IATA_CODE, CITY, STATE),
+            by = c("DESTINATION_AIRPORT" = "IATA_CODE"))
+
+airports_by_state <- airports %>%
+  filter(!is.na(STATE)) %>% 
+  group_by(STATE) %>%
+  summarise(
+    total_aeroportos = n(),
+    total_cidades = n_distinct(CITY) 
+  ) %>%
+  arrange(desc(total_aeroportos))
+
+airports_by_state
+
+```
+
+```{r}
+library(webshot2)
+library(tinytex)
+library(leaflet)
+```
+
+Criação de um mapa com o local de cada aeroporto
+
+```{r}
+leaflet(data = airports) %>%
+  addTiles() %>%
+  addMarkers(
+    lng = ~LONGITUDE, 
+    lat = ~LATITUDE, 
+    popup = ~IATA_CODE
+  )
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
