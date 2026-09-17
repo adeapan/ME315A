@@ -1,0 +1,91 @@
+---
+title: "Lab 05"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(maps)
+
+# 1. Carregamento dos dados
+flights  <- read_csv('C:/Users/artur/Documents/curso r/flights.csv.zip')
+airports <- read_csv('C:/Users/artur/Documents/curso r/airports.csv')
+
+# 2. Função principal
+analisar_trajeto_aeronave <- function(tail_num, dados_flights = flights, dados_airports = airports) {
+  
+  # a & b. Filtrar, criar datetime e ordenar a tabela tidy
+  tabela_trajetos <- dados_flights %>%
+    filter(TAIL_NUMBER == tail_num) %>%
+    # Formata hora de partida (ex: 830 -> "08:30") para criar o objeto Datetime
+    mutate(
+      DEP_TIME_PAD = sprintf("%04d", as.numeric(SCHEDULED_DEPARTURE)),
+      DATETIME = ymd_hm(paste(YEAR, MONTH, DAY, DEP_TIME_PAD)),
+      # d. Estatística customizada: Velocidade média em mph
+      VELOCIDADE_MEDIA = DISTANCE / (AIR_TIME / 60)
+    ) %>%
+    filter(!is.na(DATETIME)) %>% 
+    arrange(DATETIME)
+  
+  if (nrow(tabela_trajetos) == 0) {
+    stop("Nenhum voo encontrado para a aeronave informada.")
+  }
+
+  # c & d. Cruzar coordenadas geográficas para origem e destino
+  dados_mapa <- tabela_trajetos %>%
+    left_join(dados_airports %>% select(IATA_CODE, LATITUDE, LONGITUDE), 
+              by = c("ORIGIN_AIRPORT" = "IATA_CODE")) %>%
+    rename(LAT_ORIGEM = LATITUDE, LON_ORIGEM = LONGITUDE) %>%
+    left_join(dados_airports %>% select(IATA_CODE, LATITUDE, LONGITUDE), 
+              by = c("DESTINATION_AIRPORT" = "IATA_CODE")) %>%
+    rename(LAT_DESTINO = LATITUDE, LON_DESTINO = LONGITUDE) %>%
+    filter(!is.na(LAT_ORIGEM) & !is.na(LAT_DESTINO))
+
+  # Obter mapa base dos EUA contíguos
+  usa_map <- map_data("state")
+
+  # Construção do mapa
+  mapa_trajeto <- ggplot() +
+    # Desenha os estados dos EUA
+    geom_polygon(data = usa_map, aes(x = long, y = lat, group = group),
+                 fill = "#f0f0f0", color = "white", linewidth = 0.3) +
+    # Desenha as conexões dos voos na sequência cronológica
+    geom_curve(data = dados_mapa,
+               aes(x = LON_ORIGEM, y = LAT_ORIGEM, 
+                   xend = LON_DESTINO, yend = LAT_DESTINO,
+                   linewidth = VELOCIDADE_MEDIA, color = VELOCIDADE_MEDIA),
+               alpha = 0.6, curvature = 0.15) +
+    # Desenha os pontos dos aeroportos visitados
+    geom_point(data = dados_mapa, aes(x = LON_ORIGEM, y = LAT_ORIGEM),
+               color = "#d95f02", size = 1.5, alpha = 0.8) +
+    scale_color_viridis_c(option = "magma", name = "Vel. Média (mph)") +
+    scale_linewidth_continuous(range = c(0.4, 2.0), name = "Vel. Média (mph)") +
+    coord_quickmap(xlim = c(-125, -66), ylim = c(24, 50)) +
+    labs(
+      title = paste("Trajeto Anual da Aeronave:", tail_num),
+      subtitle = paste("Total de voos realizados:", nrow(dados_mapa)),
+      x = "Longitude", y = "Latitude"
+    ) +
+    theme_minimal()
+
+  # Retorna tanto a tabela limpa quanto o gráfico do mapa
+  return(list(
+    tabela = tabela_trajetos,
+    mapa = mapa_trajeto
+  ))
+}
+
+# Exemplo de uso:
+# resultado <- analisar_trajeto_aeronave("N431WN")
+# print(resultado$tabela)
+# print(resultado$mapa)
+```
+
+```{r}
+#Seleciona um código aleatório de avião
+tail_number <- sample(flights$TAIL_NUMBER, 1)
+#Executa a função
+analisar_trajeto_aeronave(tail_number)
+```
+
