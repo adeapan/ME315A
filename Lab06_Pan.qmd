@@ -1,0 +1,99 @@
+---
+title: "Lab06_Pan"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(RSQLite)
+library(DBI)
+```
+
+```{r}
+# Armazena o caminho do diretório onde o arquivo foi salvo
+path <- "C:/Users/artur/Documents/curso r"
+
+# Combina o caminho do diretório com o nome do arquivo
+fname <- file.path(path, "disco.db", fsep = '/')
+```
+
+```{r}
+# Estabelecimento da conexão com o banco de dados
+conn = dbConnect(SQLite(), fname)
+conn
+```
+
+```{r}
+# Tabelas existentes no banco de dados
+dbListTables(conn)
+```
+
+Problema: Identifique os nomes de todas as colunas existentes na tabela `customers`.
+
+Resposta:
+
+```{sql connection=conn}
+SELECT name FROM pragma_table_info('customers')
+```
+
+Problema : Utilizando **apenas** `SQLite`, com o apoio do comando `dbGetQuery`, identifique quantos clientes estão atualmente cadastrados neste banco de dados.
+
+Resposta:
+
+```{r}
+dbGetQuery(conn, 'SELECT COUNT(CustomerId) as numero_de_clientes FROM customers')
+```
+
+Problema:  Utilizando **apenas** `SQLite`, identifique o número de países diferentes em que moram os clientes encontrados acima.
+
+Resposta:
+
+```{sql connection=conn}
+SELECT COUNT(DISTINCT Country) as paises_diferentes FROM customers
+```
+
+Problema: Utilizando **apenas** `SQLite`, quantos clientes existem por país? A tabela resultante deve conter o nome do país e a respectiva contagem, além de ser ordenada de maneira decrescente pela referida contagem.
+
+Resposta:
+
+```{sql connection=conn}
+SELECT Country as país, COUNT(CustomerId) as n_de_usuarios FROM customers
+GROUP BY COUNTRY
+```
+
+Problema: Quais são os 5 países com mais clientes registrados? Use apenas `SQLite`.
+
+Resposta:
+
+```{sql connection=conn}
+SELECT Country as país, COUNT(CustomerId) as n_de_usuarios FROM customers
+GROUP BY COUNTRY
+ORDER BY COUNT(CustomerId) DESC
+LIMIT 5
+```
+
+Problema: Quais são os países registrados que possuem apenas 6 letras no nome?
+
+Resposta:
+
+```{sql connection=conn}
+SELECT DISTINCT Country FROM customers
+WHERE COUNTRY LIKE ('______')
+```
+
+Problema: Quais foram as músicas compradas por clientes brasileiros?
+
+Resposta:
+
+```{sql connection=conn}
+SELECT DISTINCT t.Name AS Nome_da_Musica FROM customers c
+JOIN invoices i ON c.CustomerId=i.CustomerId
+JOIN invoice_items ii ON i.InvoiceId=ii.InvoiceId
+JOIN tracks t ON t.TrackId=ii.TrackId
+WHERE Country = 'Brazil'
+
+```
+
+```{r}
+dbDisconnect(conn)
+```
