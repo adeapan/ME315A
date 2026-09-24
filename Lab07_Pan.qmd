@@ -1,0 +1,151 @@
+---
+title: "Lab07_Pan"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(DBI)
+library(RSQLite)
+```
+
+```{r}
+conn = dbConnect(SQLite(), 'C:/Users/artur/Documents/curso r/database.sqlite3')
+```
+
+Seleção de todos os professores que lecionam matérias de Estatística:
+```{sql connection=conn}
+SELECT DISTINCT i.name as names_profs FROM subjects s
+JOIN subject_memberships sm ON s.code=sm.subject_code
+JOIN sections se ON se.course_offering_uuid=sm.course_offering_uuid
+JOIN teachings t ON t.section_uuid=se.uuid
+JOIN instructors i ON i.id=t.instructor_id
+WHERE abbreviation = 'STAT'
+```
+
+Seleção do professor mais difícil de passar (menor média):
+```{sql connection=conn}
+SELECT 
+    i.name AS instructor_name,
+    ROUND(
+        SUM(
+            gd.a_count * 4.0 + 
+            gd.ab_count * 3.5 + 
+            gd.b_count * 3.0 + 
+            gd.bc_count * 2.5 + 
+            gd.c_count * 2.0 + 
+            gd.d_count * 1.0 + 
+            gd.f_count * 0.0
+        ) / 
+        NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0), 
+        2
+    ) AS media_notas
+FROM subjects sub
+JOIN subject_memberships sm ON sub.code = sm.subject_code
+JOIN course_offerings co ON sm.course_offering_uuid = co.uuid
+JOIN courses c ON co.course_uuid = c.uuid
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+JOIN sections sec ON co.uuid = sec.course_offering_uuid AND gd.section_number = sec.number
+JOIN teachings t ON sec.uuid = t.section_uuid
+JOIN instructors i ON t.instructor_id = i.id
+WHERE sub.abbreviation = 'STAT' 
+GROUP BY i.id, i.name, c.name
+HAVING media_notas IS NOT NULL
+ORDER BY media_notas
+LIMIT 1
+```
+Seleção do professor mais fácil de passar (maior média):
+```{sql connection=conn}
+SELECT 
+    i.name AS instructor_name,
+    ROUND(
+        SUM(
+            gd.a_count * 4.0 + 
+            gd.ab_count * 3.5 + 
+            gd.b_count * 3.0 + 
+            gd.bc_count * 2.5 + 
+            gd.c_count * 2.0 + 
+            gd.d_count * 1.0 + 
+            gd.f_count * 0.0
+        ) / 
+        NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0), 
+        2
+    ) AS media_notas
+FROM subjects sub
+JOIN subject_memberships sm ON sub.code = sm.subject_code
+JOIN course_offerings co ON sm.course_offering_uuid = co.uuid
+JOIN courses c ON co.course_uuid = c.uuid
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+JOIN sections sec ON co.uuid = sec.course_offering_uuid AND gd.section_number = sec.number
+JOIN teachings t ON sec.uuid = t.section_uuid
+JOIN instructors i ON t.instructor_id = i.id
+WHERE sub.abbreviation = 'STAT' 
+GROUP BY i.id, i.name, c.name
+HAVING media_notas IS NOT NULL
+ORDER BY media_notas DESC
+LIMIT 1
+```
+Seleção da matéria mais difícil de passar (menor média)
+```{sql connection=conn}
+SELECT 
+    co.name AS subject_name,
+    ROUND(
+        SUM(
+            gd.a_count * 4.0 + 
+            gd.ab_count * 3.5 + 
+            gd.b_count * 3.0 + 
+            gd.bc_count * 2.5 + 
+            gd.c_count * 2.0 + 
+            gd.d_count * 1.0 + 
+            gd.f_count * 0.0
+        ) / 
+        NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0), 
+        2
+    ) AS media_notas
+FROM subjects sub
+JOIN subject_memberships sm ON sub.code = sm.subject_code
+JOIN course_offerings co ON sm.course_offering_uuid = co.uuid
+JOIN courses c ON co.course_uuid = c.uuid
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+JOIN sections sec ON co.uuid = sec.course_offering_uuid AND gd.section_number = sec.number
+JOIN teachings t ON sec.uuid = t.section_uuid
+JOIN instructors i ON t.instructor_id = i.id
+WHERE sub.abbreviation = 'STAT' 
+GROUP BY i.id, i.name, c.name
+HAVING media_notas IS NOT NULL
+ORDER BY media_notas 
+LIMIT 1
+```
+Seleção da matéria mais fácil (maior média):
+```{sql connection=conn}
+SELECT 
+    co.name AS subject_name,
+    ROUND(
+        SUM(
+            gd.a_count * 4.0 + 
+            gd.ab_count * 3.5 + 
+            gd.b_count * 3.0 + 
+            gd.bc_count * 2.5 + 
+            gd.c_count * 2.0 + 
+            gd.d_count * 1.0 + 
+            gd.f_count * 0.0
+        ) / 
+        NULLIF(SUM(gd.a_count + gd.ab_count + gd.b_count + gd.bc_count + gd.c_count + gd.d_count + gd.f_count), 0), 
+        2
+    ) AS media_notas
+FROM subjects sub
+JOIN subject_memberships sm ON sub.code = sm.subject_code
+JOIN course_offerings co ON sm.course_offering_uuid = co.uuid
+JOIN courses c ON co.course_uuid = c.uuid
+JOIN grade_distributions gd ON co.uuid = gd.course_offering_uuid
+JOIN sections sec ON co.uuid = sec.course_offering_uuid AND gd.section_number = sec.number
+JOIN teachings t ON sec.uuid = t.section_uuid
+JOIN instructors i ON t.instructor_id = i.id
+WHERE sub.abbreviation = 'STAT' 
+GROUP BY i.id, i.name, c.name
+HAVING media_notas IS NOT NULL
+ORDER BY media_notas DESC
+LIMIT 1
+```
+
+
